@@ -19,10 +19,18 @@ argue about, written down:
 from __future__ import annotations
 
 import math
+import os
 import sqlite3
 from dataclasses import dataclass, field
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 QTY_DP = 3  # quantities kept to grams / millimetres
+
+
+def plant_now() -> str:
+    """Timestamp in the plant's time zone (the server may run in UTC)."""
+    return datetime.now(ZoneInfo(os.environ.get("PLANT_TZ", "Asia/Kolkata"))).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def q(x: float) -> float:
@@ -171,8 +179,9 @@ def _post(conn, kind: str, lines: list[tuple[int, float]], *, ref=None, note=Non
     """Write one transaction and its movements atomically."""
     with conn:
         cur = conn.execute(
-            "INSERT INTO txns (kind, ref, note, user, override_reason, reverses_txn_id) VALUES (?,?,?,?,?,?)",
-            (kind, ref.strip() if ref else None, note, user, override_reason, reverses))
+            """INSERT INTO txns (kind, ref, note, user, override_reason, reverses_txn_id, created_at)
+               VALUES (?,?,?,?,?,?,?)""",
+            (kind, ref.strip() if ref else None, note, user, override_reason, reverses, plant_now()))
         txn_id = cur.lastrowid
         moves = []
         for item_id, qty in lines:

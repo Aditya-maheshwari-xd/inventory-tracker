@@ -66,7 +66,7 @@ inventory/
 
 Stock is **never stored** — it's the sum of the movements. Each user action is one transaction with one or more movements, written atomically, so a production entry can't half-consume material. This is the same idea as an accounting ledger, and it's what makes reversals and the audit trail simple.
 
-## What I'd ask a real customer before going further
+## Open questions for a real customer
 
 - Do they buy in one unit and consume in another (sheets bought by the ton, issued by the sheet)? That needs unit conversions on items.
 - Is material issued to the floor in advance (store → line), or consumed at production entry? Many plants do the first, and then "line stock" is its own location.
@@ -75,4 +75,4 @@ Stock is **never stored** — it's the sum of the movements. Each user action is
 
 ## How this was built
 
-Built with Claude (Anthropic) as an AI coding agent. I defined the problem and the rules for each exception above, reviewed the code, and tested it — both with the automated tests and by clicking through the UI with realistic entries (including forcing a shortage through and reversing it).
+Built with Claude (Anthropic) as an AI coding agent. The behaviour for each exception is written down above and covered by tests, so it can be reviewed and changed.
