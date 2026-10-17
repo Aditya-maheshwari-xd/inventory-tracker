@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Inventory Tracker</title>
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--ink:#18202b;--muted:#5d6878;--line:#e2e5ea;--accent:#1f4e79;
+--ok:#1e7b4f;--warn:#9a6700;--err:#b42318;--warnbg:#fff4d6;--errbg:#fde7e5;--okbg:#e5f4ec}
+@media (prefers-color-scheme:dark){:root{--bg:#11151b;--card:#1a2029;--ink:#e6eaf0;--muted:#97a3b3;
+--line:#2a323d;--accent:#8db7e8;--ok:#6fcf9f;--warn:#e6b450;--err:#ff8a80;--warnbg:#3b3218;--errbg:#43201d;--okbg:#17352a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,sans-serif}
+header{background:var(--card);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;gap:16px;
+align-items:center;flex-wrap:wrap;position:sticky;top:0;z-index:2}
+header h1{font-size:17px;margin:0;margin-right:auto}
+nav button{background:none;border:0;padding:8px 10px;border-radius:6px;color:var(--muted);font:inherit;cursor:pointer}
+nav button.on{background:var(--bg);color:var(--ink);font-weight:600}
+main{max-width:1100px;margin:0 auto;padding:16px}
+section{display:none} section.on{display:block}
+h2{font-size:15px;margin:22px 0 8px;color:var(--accent)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow-x:auto}
+table{border-collapse:collapse;width:100%}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font-size:12px;color:var(--muted);font-weight:600} td.n{text-align:right;font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}
+.pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:600}
+.pill.ok{background:var(--okbg);color:var(--ok)} .pill.low{background:var(--warnbg);color:var(--warn)}
+.pill.negative{background:var(--errbg);color:var(--err)}
+.alert{padding:9px 12px;border-radius:6px;margin-bottom:6px}
+.alert.error{background:var(--errbg)} .alert.warning{background:var(--warnbg)} .alert.info{background:var(--card);border:1px solid var(--line)}
+.forms{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+form{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px}
+form h3{margin:0 0 10px;font-size:14px}
+label{display:block;font-size:12px;color:var(--muted);margin:8px 0 3px}
+input,select{width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit}
+button.primary{margin-top:12px;background:var(--accent);color:var(--card);border:0;border-radius:6px;padding:9px 14px;font:inherit;font-weight:600;cursor:pointer}
+button.small{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:6px;padding:3px 8px;cursor:pointer;font:inherit;font-size:12px}
+.msg{margin-top:10px;font-size:13px;white-space:pre-wrap} .msg.bad{color:var(--err)} .msg.good{color:var(--ok)}
+.preview{font-size:12px;color:var(--muted);margin-top:8px}
+.override{display:none} .override.show{display:block}
+.muted{color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Inventory Tracker</h1>
+  <nav>
+    <button data-tab="stock" class="on">Stock</button>
+    <button data-tab="record">Record entry</button>
+    <button data-tab="ledger">Item ledger</button>
+    <button data-tab="history">Recent entries</button>
+  </nav>
+</header>
+<main>
+<section id="stock" class="on">
+  <h2>Needs attention</h2><div id="alerts"></div>
+  <h2>Stock on hand</h2><div class="card"><table id="stockTable"></table></div>
+  <h2>What can we still make from stock?</h2><div class="card"><table id="buildTable"></table></div>
+</section>
+
+<section id="record">
+  <div class="forms">
+    <form id="fProduction">
+      <h3>Production entry</h3>
+      <label>Finished item</label><select name="code" data-kind="finished"></select>
+      <label>Good pieces</label><input name="good_qty" type="number" min="0" step="any" required>
+      <label>Rejected pieces</label><input name="rejected_qty" type="number" min="0" step="any" value="0">
+      <label>Batch / job card no.</label><input name="batch" placeholder="B-2026-1015-A">
+      <div class="preview" id="needPreview"></div>
+      <div class="override"><label>Not enough material on record. Reason to record it anyway</label>
+        <input name="override_reason" placeholder="e.g. material received, GRN not entered yet"></div>
+      <button class="primary">Record production</button><div class="msg"></div>
+    </form>
+    <form id="fReceipt">
+      <h3>Goods receipt (GRN)</h3>
+      <label>Material</label><select name="code" data-kind="raw,consumable"></select>
+      <label>Quantity</label><input name="qty" type="number" min="0" step="any" required>
+      <label>GRN no.</label><input name="grn" placeholder="GRN-1046">
+      <label>Supplier</label><input name="supplier">
+      <button class="primary">Receive</button><div class="msg"></div>
+    </form>
+    <form id="fWastage">
+      <h3>Wastage / scrap</h3>
+      <label>Item</label><select name="code"></select>
+      <label>Quantity</label><input name="qty" type="number" min="0" step="any" required>
+      <label>Reason</label><input name="reason" required placeholder="rust, damage, QC reject…">
+      <button class="primary">Record wastage</button><div class="msg"></div>
+    </form>
+    <form id="fCount">
+      <h3>Physical stock count</h3>
+      <label>Item</label><select name="code"></select>
+      <label>Counted quantity</label><input name="counted" type="number" min="0" step="any" required>
+      <label>Reason if it differs</label><input name="reason" placeholder="e.g. weighing error at GRN">
+      <button class="primary">Post count</button><div class="msg"></div>
+    </form>
+    <form id="fDispatch">
+      <h3>Dispatch</h3>
+      <label>Finished item</label><select name="code" data-kind="finished"></select>
+      <label>Quantity</label><input name="qty" type="number" min="0" step="any" required>
+      <label>Invoice no.</label><input name="invoice">
+      <button class="primary">Dispatch</button><div class="msg"></div>
+    </form>
+  </div>
+</section>
+
+<section id="ledger">
+  <h2>Item ledger</h2>
+  <select id="ledgerItem" style="max-width:320px"></select>
+  <p class="muted">Every movement, oldest first, with running balance. Nothing is ever edited — wrong entries are reversed.</p>
+  <div class="card"><table id="ledgerTable"></table></div>
+</section>
+
+<section id="history">
+  <h2>Recent entries</h2>
+  <div class="card"><table id="txnTable"></table></div>
+</section>
+</main>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const num = v => v == null ? "—" : Number(v).toLocaleString("en-IN", {maximumFractionDigits: 3});
+let items = [];
+
+async function api(path, body) {
+  const res = await fetch(path, body ? {method: "POST", headers: {"Content-Type": "application/json"},
+                                        body: JSON.stringify(body)} : {});
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) { const e = new Error(data.error || (data.detail && JSON.stringify(data.detail)) || res.statusText);
+                 e.status = res.status; e.data = data; throw e; }
+  return data;
+}
+
+function table(el, cols, rows) {
+  el.innerHTML = `<thead><tr>${cols.map(c => `<th>${c[0]}</th>`).join("")}</tr></thead><tbody>${
+    rows.length ? rows.map(r => `<tr>${cols.map(c => `<td class="${c[2] || ""}">${c[1](r)}</td>`).join("")}</tr>`).join("")
+                : `<tr><td colspan="${cols.length}" class="muted">Nothing yet</td></tr>`}</tbody>`;
+}
+
+async function loadStock() {
+  const d = await api("/api/stock");
+  items = d.items;
+  $("#alerts").innerHTML = d.alerts.length
+    ? d.alerts.map(a => `<div class="alert ${a.level}">${esc(a.message)}</div>`).join("")
+    : `<div class="alert info">All stock above reorder level.</div>`;
+  table($("#stockTable"), [
+    ["Code", r => `<b>${esc(r.code)}</b>`], ["Item", r => esc(r.name)], ["Type", r => r.kind],
+    ["Stock", r => num(r.stock), "n"], ["Unit", r => esc(r.uom)], ["Reorder at", r => num(r.reorder_level), "n"],
+    ["Status", r => `<span class="pill ${r.status}">${r.status}</span>`],
+  ], d.items);
+  table($("#buildTable"), [
+    ["Product", r => `<b>${esc(r.code)}</b> ${esc(r.name)}`],
+    ["Can still make", r => r.can_build == null ? "—" : num(r.can_build), "n"],
+    ["Limited by", r => esc(r.limited_by || r.note || "")],
+  ], d.can_build);
+  fillSelects();
+}
+
+function fillSelects() {
+  document.querySelectorAll("select[name=code], #ledgerItem").forEach(sel => {
+    const kinds = sel.dataset.kind ? sel.dataset.kind.split(",") : null;
+    const keep = sel.value;
+    sel.innerHTML = items.filter(i => !kinds || kinds.includes(i.kind))
+      .map(i => `<option value="${esc(i.code)}">${esc(i.code)} — ${esc(i.name)} (${num(i.stock)} ${esc(i.uom)})</option>`).join("");
+    if (keep) sel.value = keep;
+  });
+}
+
+function formBody(form) {
+  const body = {};
+  new FormData(form).forEach((v, k) => { if (v !== "") body[k] = form.elements[k].type === "number" ? Number(v) : v; });
+  return body;
+}
+
+const endpoints = {fProduction: "/api/production", fReceipt: "/api/receipts", fWastage: "/api/wastage",
+                   fCount: "/api/stock-count", fDispatch: "/api/dispatch"};
+
+Object.entries(endpoints).forEach(([id, url]) => {
+  const form = document.getElementById(id), msg = $(".msg", form);
+  form.addEventListener("submit", async ev => {
+    ev.preventDefault();
+    msg.className = "msg"; msg.textContent = "Saving…";
+    try {
+      const r = await api(url, formBody(form));
+      msg.className = "msg good";
+      msg.textContent = r.txn_id ? `Saved as entry #${r.txn_id}. ` + r.movements.map(m => `${m.item} ${m.qty > 0 ? "+" : ""}${num(m.qty)}`).join(", ")
+                                 : (r.warnings[0] || "Nothing to change");
+      if (r.warnings.length && r.txn_id) msg.textContent += "\n⚠ " + r.warnings.join("\n⚠ ");
+      form.reset(); $(".override", form)?.classList.remove("show");
+      if (id === "fProduction") $("#needPreview").textContent = "";
+      await loadStock();
+    } catch (e) {
+      msg.className = "msg bad"; msg.textContent = e.message;
+      if (e.status === 409 && e.data.shortages) $(".override", form)?.classList.add("show");
+    }
+  });
+});
+
+async function previewNeeds() {
+  const f = $("#fProduction"), units = Number(f.good_qty.value || 0) + Number(f.rejected_qty.value || 0);
+  if (!units || !f.code.value) { $("#needPreview").textContent = ""; return; }
+  try {
+    const need = await api(`/api/items/${encodeURIComponent(f.code.value)}/required?units=${units}`);
+    $("#needPreview").innerHTML = "Will use: " + need.map(n =>
+      `${esc(n.code)} ${num(n.needed)} ${esc(n.uom)}${n.enough ? "" : ` <b style="color:var(--err)">(have ${num(n.available)})</b>`}`).join(" · ");
+  } catch (e) { $("#needPreview").textContent = e.message; }
+}
+["input", "change"].forEach(ev => $("#fProduction").addEventListener(ev, previewNeeds));
+
+async function loadLedger() {
+  const code = $("#ledgerItem").value; if (!code) return;
+  const rows = await api(`/api/items/${encodeURIComponent(code)}/ledger`);
+  table($("#ledgerTable"), [
+    ["When", r => esc(r.created_at)], ["Entry", r => `#${r.txn_id} ${r.kind}${r.reversed_by_txn_id ? ` <span class="pill negative">reversed</span>` : ""}`],
+    ["Ref", r => esc(r.ref)], ["In / out", r => (r.qty > 0 ? "+" : "") + num(r.qty), "n"],
+    ["Balance", r => `<b>${num(r.balance)}</b>`, "n"], ["Note", r => esc(r.note) + (r.override_reason ? ` ⚠ ${esc(r.override_reason)}` : "")],
+  ], rows.slice().reverse());
+}
+$("#ledgerItem").addEventListener("change", loadLedger);
+
+async function loadTxns() {
+  const rows = await api("/api/txns");
+  table($("#txnTable"), [
+    ["#", r => r.id], ["When", r => esc(r.created_at)], ["Type", r => r.kind], ["Ref", r => esc(r.ref)],
+    ["Movements", r => r.movements.map(m => `${esc(m.code)} ${m.qty > 0 ? "+" : ""}${num(m.qty)}`).join(", ")],
+    ["By", r => esc(r.user)],
+    ["", r => r.reversed_by_txn_id ? `<span class="muted">reversed by #${r.reversed_by_txn_id}</span>`
+              : r.kind === "reversal" ? "" : `<button class="small" data-rev="${r.id}">Reverse</button>`],
+  ], rows);
+}
+$("#txnTable").addEventListener("click", async ev => {
+  const id = ev.target.dataset.rev; if (!id) return;
+  const reason = prompt(`Why is entry #${id} being reversed?`); if (!reason) return;
+  try { await api(`/api/txns/${id}/reverse`, {reason}); }
+  catch (e) {
+    if (e.status === 409 && e.data.shortages) {
+      const ov = prompt(e.message + "\n\nType a reason to reverse anyway (stock will go negative):");
+      if (!ov) return;
+      try { await api(`/api/txns/${id}/reverse`, {reason, override_reason: ov}); } catch (e2) { alert(e2.message); return; }
+    } else { alert(e.message); return; }
+  }
+  await Promise.all([loadTxns(), loadStock()]);
+});
+
+document.querySelectorAll("nav button").forEach(b => b.addEventListener("click", async () => {
+  document.querySelectorAll("nav button, section").forEach(x => x.classList.remove("on"));
+  b.classList.add("on"); document.getElementById(b.dataset.tab).classList.add("on");
+  if (b.dataset.tab === "ledger") await loadLedger();
+  if (b.dataset.tab === "history") await loadTxns();
+  if (b.dataset.tab === "stock") await loadStock();
+}));
+
+loadStock().catch(e => { $("#alerts").innerHTML = `<div class="alert error">Could not load stock: ${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>
