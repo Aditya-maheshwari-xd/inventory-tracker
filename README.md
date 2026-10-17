@@ -73,6 +73,4 @@ Stock is **never stored** — it's the sum of the movements. Each user action is
 - Who is allowed to use the override, and should the owner get a message when they do?
 - Batch / heat number traceability, if their customers (often auto OEMs) ask for it.
 
-## How this was built
 
-Built with Claude (Anthropic) as an AI coding agent. The behaviour for each exception is written down above and covered by tests, so it can be reviewed and changed.
