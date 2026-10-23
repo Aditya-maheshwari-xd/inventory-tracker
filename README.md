@@ -2,6 +2,8 @@
 
 A raw material and finished goods tracker for a small manufacturer, built around one idea: **when the supervisor records production, the raw material should go down by itself.**
 
+**Live demo: [inventory-tracker-7w15.onrender.com](https://inventory-tracker-7w15.onrender.com)** (free hosting: the first visit after a quiet spell takes about a minute to wake up, and the sample data resets on restart). API docs: [inventory-tracker-7w15.onrender.com/docs](https://inventory-tracker-7w15.onrender.com/docs).
+
 In most small plants, the store keeper keeps a stock register, the supervisor keeps a production register, and nobody can say how much sheet metal is actually left until someone walks to the rack. This app links the two through a bill of materials (BOM), keeps every stock change as an entry you can trace, and is strict about the exceptions that cause stock to drift.
 
 ![Stock screen](docs/stock.png)
