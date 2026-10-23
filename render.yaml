@@ -1,0 +1,16 @@
+# Render deployment (free plan). Render reads this file when you create a "Blueprint".
+#
+# Free services sleep after 15 minutes with no visitors and take about a minute to wake up.
+# The disk is not kept between restarts, so every start loads the sample plant again
+# (inventory.seed skips loading if the database already has data).
+services:
+  - type: web
+    name: inventory-tracker
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m inventory.seed && uvicorn inventory.api:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/stock
+    envVars:
+      - key: PLANT_TZ
+        value: Asia/Kolkata

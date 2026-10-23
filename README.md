@@ -53,6 +53,10 @@ API docs are at `/docs`. Main endpoints:
 | `GET /api/items/{code}/ledger` | item history with running balance |
 | `GET /api/items/{code}/required?units=500` | material a production run will use |
 
+## Deploy (free)
+
+`render.yaml` sets this up as a free web service on [Render](https://render.com): in the Render dashboard choose **New → Blueprint** and pick this repo. Free services sleep after 15 minutes without visitors and take about a minute to wake up. The disk isn't kept between restarts, so each start loads the sample plant again.
+
 ## Design
 
 ```
